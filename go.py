@@ -15,7 +15,7 @@ Help:
   Visit https://github.com/wearescouting/s3-download-and-delete
 """
 
-import botocore
+import boto3
 import docopt
 import os
 import sys
@@ -24,23 +24,17 @@ client = boto3.client('s3')
 
 def get_contents():
   contents = []
-  token = None
+  paginator = client.get_paginator('list_objects_v2')
+  page_iterator = paginator.paginate(Bucket=os.getenv('BUCKET'))
 
-  while True
-    response = client.list_objects_v2(Bucket=os.getenv('BUCKET'), ContinuationToken=token)
-    contents = contents + response.Contents
-
-    if !response.IsTruncated:
-      break
-
-    else:
-      token = response.NextContinuationToken
+  for page in page_iterator:
+    contents = contents + page['Contents']
 
   for content in contents:
-    client.download_file(os.getenv('BUCKET'), content.Key, os.getenv('DIRECTORY') + '/' + content.Key)
+    client.download_file(os.getenv('BUCKET'), content['Key'], os.getenv('DIRECTORY') + '/' + content['Key'])
 
   client.delete_objects(Bucket=os.getenv('BUCKET'), Delete={
-    'Objects': map(lambda x: {'Key': x.Key}, contents)
+    'Objects': map(lambda x: {'Key': x['Key']}, contents)
   })
 
 get_contents()
