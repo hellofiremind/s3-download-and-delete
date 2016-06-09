@@ -10,11 +10,15 @@ Options:
 
 import boto3
 from docopt import docopt
+from multiprocessing import Process, Queue
 import os
 
 client = boto3.client('s3')
 
-def get_contents(bucket, directory):
+def download_file(bucket, directory, key):
+  client.download_file(bucket, key, os.path.join(os.getcwd(), directory, key))
+
+def get_contents(queue, bucket, directory):
   contents = []
   paginator = client.get_paginator('list_objects_v2')
   page_iterator = paginator.paginate(Bucket=bucket)
@@ -23,7 +27,7 @@ def get_contents(bucket, directory):
     contents = contents + page['Contents']
 
   for content in contents:
-    client.download_file(bucket, content['Key'], os.path.join(os.getcwd(), directory, content['Key']))
+    queue.put(download_file(bucket, directory, content['Key']))
 
   client.delete_objects(Bucket=bucket, Delete={
     'Objects': map(lambda x: {'Key': x['Key']}, contents)
@@ -31,4 +35,7 @@ def get_contents(bucket, directory):
 
 if __name__ == '__main__':
   options = docopt(__doc__)
-  get_contents(options['--bucket'], options['--directory'])
+  q = Queue()
+  p = Process(target=get_contents, args=(q, options['--bucket'], options['--directory']))
+  p.start()
+  p.join()
