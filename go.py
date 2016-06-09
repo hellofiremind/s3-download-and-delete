@@ -21,7 +21,7 @@ def download_file(bucket, directory, key):
 def get_contents(queue, bucket, directory):
   contents = []
   paginator = client.get_paginator('list_objects_v2')
-  page_iterator = paginator.paginate(Bucket=bucket)
+  page_iterator = paginator.paginate(Bucket=bucket, PaginationConfig={ 'PageSize': 1000 })
 
   for page in page_iterator:
     contents = contents + page['Contents']
